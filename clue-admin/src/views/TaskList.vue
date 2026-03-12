@@ -5,6 +5,7 @@
         <span style="font-weight:bold;">审核任务</span>
         <div>
           <el-button type="success" @click="goCreate">新建任务</el-button>
+          <el-button type="warning" @click="goBatchCreate">批量审核</el-button>
           <el-button type="primary" @click="load">刷新</el-button>
         </div>
       </div>
@@ -31,6 +32,18 @@
 
       <el-table-column prop="inference_time_ms" label="耗时(ms)" width="120" />
       <el-table-column prop="created_at" label="创建时间" />
+
+      <el-table-column label="操作" width="120" fixed="right">
+        <template #default="{ row }">
+          <el-button
+            type="danger"
+            size="small"
+            @click.stop="handleDelete(row)"
+          >
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <el-empty
@@ -48,30 +61,26 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchAuditTasks } from '../api/task'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { fetchAuditTasks, deleteAuditTask } from '../api/task'
 
 const router = useRouter()
 
 const tasks = ref([])
 const loading = ref(false)
 
-// 跳转详情
 function goDetail(row) {
   router.push(`/tasks/${row.task_id}`)
 }
 
-// 统一解包：兼容 request.js 已经 return res.data 的情况
 function unwrap(res) {
   if (!res) return null
-  // 常见：res === {status, data}
   if (res.status && res.data !== undefined) return res.data
-  // 兜底：如果未来有人绕过 request.js 拿到 axios 原响应
   if (res.data && res.data.data !== undefined) return res.data.data
   if (res.data !== undefined) return res.data
   return res
 }
 
-// 加载数据
 async function load() {
   loading.value = true
   try {
@@ -79,7 +88,7 @@ async function load() {
     tasks.value = unwrap(res) || []
   } catch (err) {
     console.error(err)
-    alert('获取任务失败，请确认后端已启动 http://127.0.0.1:8000')
+    ElMessage.error('获取任务失败，请确认后端已启动')
   } finally {
     loading.value = false
   }
@@ -87,6 +96,35 @@ async function load() {
 
 function goCreate() {
   router.push('/tasks/create')
+}
+
+function goBatchCreate() {
+  router.push('/tasks/create?mode=batch')
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除审核任务【${row.task_id}】吗？`,
+      '删除确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteAuditTask(row.task_id)
+    ElMessage.success('删除成功')
+    await load()
+  } catch (err) {
+    console.error(err)
+    ElMessage.error(err?.response?.data?.detail || err?.message || '删除失败')
+  }
 }
 
 onMounted(() => {

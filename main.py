@@ -542,7 +542,98 @@ async def moderate_image(
             "inference_time_ms": inference_time_ms,
         },
     }
+@app.post("/api/moderate/batch")
+async def moderate_images_batch(
+    files: List[UploadFile] = File(...),
+    rules: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    rule_list = parse_rules_input(rules)
+    if not rule_list:
+        raise HTTPException(status_code=400, detail="规则列表为空，无法执行批量审核")
 
+    if not files or len(files) == 0:
+        raise HTTPException(status_code=400, detail="未上传任何图片")
+
+    results = []
+    success_count = 0
+    fail_count = 0
+
+    for file in files:
+        try:
+            # 只处理图片
+            content_type = (file.content_type or "").lower()
+            filename_lower = (file.filename or "").lower()
+            if not (
+                content_type.startswith("image/")
+                or filename_lower.endswith(".jpg")
+                or filename_lower.endswith(".jpeg")
+                or filename_lower.endswith(".png")
+                or filename_lower.endswith(".webp")
+                or filename_lower.endswith(".gif")
+                or filename_lower.endswith(".bmp")
+            ):
+                fail_count += 1
+                results.append({
+                    "filename": file.filename,
+                    "status": "failed",
+                    "detail": "不是受支持的图片文件"
+                })
+                continue
+
+            file_ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
+            saved_name = f"{uuid.uuid4().hex}.{file_ext}"
+            file_path = os.path.join(UPLOAD_DIR, saved_name)
+
+            with open(file_path, "wb") as f:
+                shutil.copyfileobj(file.file, f)
+
+            start_time = datetime.now()
+            audit_result = clue_algorithm(image_path=file_path, rules=rule_list)
+            inference_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+
+            task_status = "auto_pass" if audit_result.get("is_safe", True) else "auto_reject"
+
+            task = AuditTask(
+                task_id=f"TASK_{uuid.uuid4().hex[:8].upper()}",
+                file_path=file_path,
+                mllm_is_safe=bool(audit_result.get("is_safe", True)),
+                violated_details=json.dumps(audit_result.get("violated_rules", []), ensure_ascii=False),
+                inference_time_ms=inference_time_ms,
+                status=task_status,
+            )
+            db.add(task)
+            db.commit()
+            db.refresh(task)
+
+            success_count += 1
+            results.append({
+                "filename": file.filename,
+                "task_id": task.task_id,
+                "image_url": f"http://127.0.0.1:8000/uploads/{saved_name}",
+                "is_safe": bool(audit_result.get("is_safe", True)),
+                "violated_rules": audit_result.get("violated_rules", []),
+                "inference_time_ms": inference_time_ms,
+                "status": task_status,
+            })
+
+        except Exception as e:
+            fail_count += 1
+            results.append({
+                "filename": file.filename,
+                "status": "failed",
+                "detail": str(e)
+            })
+
+    return {
+        "status": "success",
+        "data": {
+            "total": len(files),
+            "success_count": success_count,
+            "fail_count": fail_count,
+            "items": results
+        }
+    }
 
 # ============================================================
 # 3) 审核台账（给前端列表/仪表盘用）
@@ -573,3 +664,26 @@ def get_audit_tasks(limit: int = 10, db: Session = Depends(get_db)):
         )
 
     return {"status": "success", "data": data}
+
+@app.delete("/api/audit-tasks/{task_id}")
+def delete_audit_task(task_id: str, db: Session = Depends(get_db)):
+    task = db.query(AuditTask).filter(AuditTask.task_id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="审核任务不存在")
+
+    # 顺手删除本地图片文件
+    try:
+        if task.file_path and os.path.exists(task.file_path):
+            os.remove(task.file_path)
+    except Exception:
+        pass
+
+    db.delete(task)
+    db.commit()
+
+    return {
+        "status": "success",
+        "data": {
+            "deleted": task_id
+        }
+    }
