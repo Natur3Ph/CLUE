@@ -66,11 +66,16 @@ def create_user(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="仅管理员可创建用户")
 
-    if db.query(User).filter(User.username == payload.username).first():
+    username = payload.username.strip()
+
+    if not username:
+        raise HTTPException(status_code=400, detail="用户名不能为空")
+
+    if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="用户已存在")
 
     user = User(
-        username=payload.username.strip(),
+        username=username,
         hashed_password=hash_password(payload.password),
         role=payload.role,
         is_active=True
@@ -87,5 +92,38 @@ def create_user(
             "username": user.username,
             "role": user.role,
             "is_active": user.is_active
+        }
+    }
+
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # 只有管理员能删除用户
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="仅管理员可删除用户")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 防止删除自己
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="不能删除当前登录用户")
+
+    # 可选保护：防止删掉默认 admin
+    if user.username == "admin":
+        raise HTTPException(status_code=400, detail="默认管理员账号不允许删除")
+
+    db.delete(user)
+    db.commit()
+
+    return {
+        "status": "success",
+        "data": {
+            "deleted": user_id
         }
     }

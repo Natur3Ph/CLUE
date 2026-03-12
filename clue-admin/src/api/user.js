@@ -14,3 +14,8 @@ export function fetchUsers() {
 export function createUser(data) {
   return request.post('/api/users', data)
 }
+
+// 删除用户
+export function deleteUser(id) {
+  return request.delete(`/api/users/${id}`)
+}

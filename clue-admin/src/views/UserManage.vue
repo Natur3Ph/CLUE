@@ -21,6 +21,7 @@
             </el-tag>
           </template>
         </el-table-column>
+
         <el-table-column prop="is_active" label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="row.is_active ? 'success' : 'info'">
@@ -28,7 +29,21 @@
             </el-tag>
           </template>
         </el-table-column>
+
         <el-table-column prop="created_at" label="创建时间" min-width="200" />
+
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              type="danger"
+              size="small"
+              @click.stop="handleDelete(row)"
+              :disabled="row.username === 'admin'"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <el-empty
@@ -45,7 +60,12 @@
         </el-form-item>
 
         <el-form-item label="密码">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
+          <el-input
+            v-model="form.password"
+            type="password"
+            placeholder="请输入密码"
+            show-password
+          />
         </el-form-item>
 
         <el-form-item label="角色">
@@ -66,8 +86,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { fetchUsers, createUser } from '../api/user'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { fetchUsers, createUser, deleteUser } from '../api/user'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -87,7 +107,7 @@ async function load() {
     users.value = res?.data || []
   } catch (e) {
     console.error(e)
-    ElMessage.error('获取用户列表失败')
+    ElMessage.error(e?.response?.data?.detail || e?.message || '获取用户列表失败')
   } finally {
     loading.value = false
   }
@@ -112,7 +132,11 @@ async function handleCreate() {
 
   saving.value = true
   try {
-    await createUser(form)
+    await createUser({
+      username: form.username.trim(),
+      password: form.password,
+      role: form.role
+    })
     ElMessage.success('创建成功')
     dialogVisible.value = false
     await load()
@@ -121,6 +145,31 @@ async function handleCreate() {
     ElMessage.error(e?.response?.data?.detail || e?.message || '创建失败')
   } finally {
     saving.value = false
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除用户【${row.username}】吗？删除后不可恢复。`,
+      '删除确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteUser(row.id)
+    ElMessage.success('删除成功')
+    await load()
+  } catch (e) {
+    console.error(e)
+    ElMessage.error(e?.response?.data?.detail || e?.message || '删除失败')
   }
 }
 
