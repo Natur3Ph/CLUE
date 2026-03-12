@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import List, Optional, Any
 
 from models import get_db, SafetyRule, AuditTask
-from clue_algorithm import clue_algorithm
+from clue_algorithm import clue_algorithm, objectify_rule_algorithm
 from user_api import router as user_router
 
 app = FastAPI(title="CLUE 图像安全自动化审核系统 API", version="1.0")
@@ -213,10 +213,16 @@ def _rule_to_dict(r: SafetyRule):
         "id": r.id,
         "rule_name": r.rule_name,
         "original_rule": r.original_rule,
+        "objectified_rule": r.objectified_rule or "",
         "preconditions": _safe_json_loads(r.preconditions, []),
+        "subjective_spans": _safe_json_loads(r.subjective_spans, []),
+        "observable_signals": _safe_json_loads(r.observable_signals, []),
+        "objectiveness_score": float(r.objectiveness_score or 0.0),
+        "objectify_provider": r.objectify_provider or "",
         "is_active": bool(r.is_active),
         "version": r.version,
         "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if getattr(r, "updated_at", None) else None,
     }
 
 
@@ -252,10 +258,16 @@ def create_rule(payload: RuleCreateIn, db: Session = Depends(get_db)):
         name = payload.original_rule.strip()[:20]
 
     pre = payload.preconditions if isinstance(payload.preconditions, list) else []
+
     rule = SafetyRule(
         rule_name=name,
         original_rule=payload.original_rule.strip(),
+        objectified_rule="",
         preconditions=json.dumps(pre, ensure_ascii=False),
+        subjective_spans=json.dumps([], ensure_ascii=False),
+        observable_signals=json.dumps([], ensure_ascii=False),
+        objectiveness_score=0.0,
+        objectify_provider="",
         is_active=bool(payload.is_active),
         version=1,
         created_at=datetime.now(),
@@ -284,6 +296,13 @@ def update_rule(rule_id: int, payload: RuleUpdateIn, db: Session = Depends(get_d
         orr = payload.original_rule.strip()
         if orr and orr != rule.original_rule:
             rule.original_rule = orr
+            # 原规则变了，清空旧客观化结果，避免脏数据
+            rule.objectified_rule = ""
+            rule.preconditions = json.dumps([], ensure_ascii=False)
+            rule.subjective_spans = json.dumps([], ensure_ascii=False)
+            rule.observable_signals = json.dumps([], ensure_ascii=False)
+            rule.objectiveness_score = 0.0
+            rule.objectify_provider = ""
             changed = True
 
     if payload.preconditions is not None:
@@ -475,20 +494,102 @@ def objectify_rule(rule_id: int, db: Session = Depends(get_db)):
 
     keyword_triggers = _load_keyword_triggers_from_settings()
 
-    pre = _openai_objectify_rule(original)
+    result = objectify_rule_algorithm(
+        original_rule=original,
+        keyword_triggers=keyword_triggers,
+        provider=None,   # 默认跟随 CLUE_PROVIDER
+        max_iters=2
+    )
 
-    if pre is None:
-        pre = _mock_objectify_rule(original, keyword_triggers)
-
-    rule.preconditions = json.dumps(pre, ensure_ascii=False)
+    rule.objectified_rule = result.get("objectified_rule", "")
+    rule.preconditions = json.dumps(result.get("preconditions", []), ensure_ascii=False)
+    rule.subjective_spans = json.dumps(result.get("subjective_spans", []), ensure_ascii=False)
+    rule.observable_signals = json.dumps(result.get("observable_signals", []), ensure_ascii=False)
+    rule.objectiveness_score = float(result.get("objectiveness_score", 0.0))
+    rule.objectify_provider = result.get("provider", "")
     rule.version = (rule.version or 1) + 1
 
     db.add(rule)
     db.commit()
     db.refresh(rule)
 
-    return {"status": "success", "data": _rule_to_dict(rule)}
+    data = _rule_to_dict(rule)
+    data["issues"] = result.get("issues", [])
+    return {"status": "success", "data": data}
 
+def _load_keyword_triggers_from_settings() -> dict:
+    default_triggers = {
+        "生殖器": ["生殖器", "裸露", "下体", "阴部", "性器官", "乳头", "臀部"],
+        "暴力血腥": ["流血", "血腥", "残肢", "尸体", "濒死", "死亡", "严重受伤", "开放性伤口"],
+        "涉政": ["国旗", "领导人", "政治", "抗议", "游行", "集会", "标语"],
+        "违禁品": ["毒品", "枪", "弹药", "炸弹", "爆炸物"],
+    }
+
+    try:
+        if os.path.exists("settings.json"):
+            with open("settings.json", "r", encoding="utf-8") as f:
+                data = json.load(f) or {}
+            kt = data.get("keyword_triggers")
+            if isinstance(kt, dict) and kt:
+                cleaned = {}
+                for k, v in kt.items():
+                    if not k:
+                        continue
+                    if isinstance(v, list):
+                        cleaned[str(k)] = [str(x) for x in v if str(x).strip()]
+                    else:
+                        cleaned[str(k)] = [str(v).strip()] if str(v).strip() else []
+                return cleaned or default_triggers
+    except Exception:
+        pass
+
+    return default_triggers
+
+
+def _resolve_rules_for_audit(rule_list: List[str], db: Session) -> List[dict]:
+    """
+    把前端传来的规则字符串，解析成完整规则对象：
+    - 若数据库已有该规则，则带上 objectified_rule / preconditions / score
+    - 若数据库没有，则现场客观化一次
+    """
+    keyword_triggers = _load_keyword_triggers_from_settings()
+    resolved = []
+
+    for text in rule_list:
+        rule_text = str(text).strip()
+        if not rule_text:
+            continue
+
+        db_rule = db.query(SafetyRule).filter(SafetyRule.original_rule == rule_text).first()
+        if db_rule:
+            resolved.append({
+                "rule_name": db_rule.rule_name,
+                "original_rule": db_rule.original_rule,
+                "objectified_rule": db_rule.objectified_rule or "",
+                "preconditions": _safe_json_loads(db_rule.preconditions, []),
+                "subjective_spans": _safe_json_loads(db_rule.subjective_spans, []),
+                "observable_signals": _safe_json_loads(db_rule.observable_signals, []),
+                "objectiveness_score": float(db_rule.objectiveness_score or 0.0),
+            })
+            continue
+
+        obj = objectify_rule_algorithm(
+            original_rule=rule_text,
+            keyword_triggers=keyword_triggers,
+            provider=None,
+            max_iters=2
+        )
+        resolved.append({
+            "rule_name": rule_text[:20],
+            "original_rule": rule_text,
+            "objectified_rule": obj.get("objectified_rule", ""),
+            "preconditions": obj.get("preconditions", []),
+            "subjective_spans": obj.get("subjective_spans", []),
+            "observable_signals": obj.get("observable_signals", []),
+            "objectiveness_score": float(obj.get("objectiveness_score", 0.0)),
+        })
+
+    return resolved
 
 # ============================================================
 # 2) 核心审核
@@ -510,11 +611,13 @@ async def moderate_image(
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
+    # 关键：把字符串规则解析成“完整规则对象”
+    resolved_rules = _resolve_rules_for_audit(rule_list, db)
+
     start_time = datetime.now()
     try:
-        audit_result = clue_algorithm(image_path=file_path, rules=rule_list)
+        audit_result = clue_algorithm(image_path=file_path, rules=resolved_rules)
     except Exception as e:
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"审核引擎执行失败: {str(e)}")
 
     inference_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
@@ -523,6 +626,7 @@ async def moderate_image(
     task = AuditTask(
         task_id=f"TASK_{uuid.uuid4().hex[:8].upper()}",
         file_path=file_path,
+        mllm_score=None,
         mllm_is_safe=bool(audit_result.get("is_safe", True)),
         violated_details=json.dumps(audit_result.get("violated_rules", []), ensure_ascii=False),
         inference_time_ms=inference_time_ms,
@@ -540,8 +644,10 @@ async def moderate_image(
             "is_safe": bool(audit_result.get("is_safe", True)),
             "violated_rules": audit_result.get("violated_rules", []),
             "inference_time_ms": inference_time_ms,
+            "explanation": audit_result.get("explanation", {}),
         },
     }
+
 @app.post("/api/moderate/batch")
 async def moderate_images_batch(
     files: List[UploadFile] = File(...),
