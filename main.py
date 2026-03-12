@@ -7,6 +7,7 @@ import shutil
 import os
 import json
 import uuid
+import traceback
 from datetime import datetime
 from typing import List, Optional, Any
 
@@ -16,6 +17,7 @@ from user_api import router as user_router
 
 app = FastAPI(title="CLUE 图像安全自动化审核系统 API", version="1.0")
 app.include_router(user_router)
+
 # =============================
 # CORS
 # =============================
@@ -52,9 +54,11 @@ DEFAULT_SETTINGS = {
     },
 }
 
+
 def save_settings(data: dict):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
 
 def load_settings() -> dict:
     if not os.path.exists(SETTINGS_FILE):
@@ -68,9 +72,9 @@ def load_settings() -> dict:
             merged["keyword_triggers"] = DEFAULT_SETTINGS["keyword_triggers"]
         return merged
     except Exception:
-        # settings.json 损坏就回退默认
         save_settings(DEFAULT_SETTINGS)
         return DEFAULT_SETTINGS
+
 
 class SettingsIn(BaseModel):
     clue_provider: str = Field(default="mock")
@@ -78,9 +82,11 @@ class SettingsIn(BaseModel):
     mock_random_hit_rate: float = Field(default=0.20, ge=0.0, le=1.0)
     keyword_triggers: dict = Field(default_factory=dict)
 
+
 @app.get("/api/settings")
 def get_settings():
     return {"status": "success", "data": load_settings()}
+
 
 @app.put("/api/settings")
 def update_settings(payload: SettingsIn):
@@ -94,7 +100,6 @@ def update_settings(payload: SettingsIn):
     s["mock_hit_rate"] = float(payload.mock_hit_rate)
     s["mock_random_hit_rate"] = float(payload.mock_random_hit_rate)
 
-    # keyword_triggers：必须是 dict[str, list[str]]（允许 value 传字符串，会自动拆分）
     kt = payload.keyword_triggers or {}
     cleaned = {}
     for k, v in kt.items():
@@ -143,7 +148,6 @@ def normalize_rules(raw_rules) -> List[str]:
                 normalized.append(str(r))
         else:
             normalized.append(str(r))
-    # 去重 + 去空
     return list({x.strip() for x in normalized if x and str(x).strip()})
 
 
@@ -159,7 +163,6 @@ def parse_rules_input(rules: str) -> List[str]:
     if not s:
         return []
 
-    # 1) 优先按 JSON 解析
     try:
         raw = json.loads(s)
         if isinstance(raw, list):
@@ -167,13 +170,11 @@ def parse_rules_input(rules: str) -> List[str]:
     except Exception:
         pass
 
-    # 2) JSON 失败：按分隔符拆分
     for sep in [",", "，", "\n", ";", "；"]:
         if sep in s:
             parts = [p.strip() for p in s.split(sep) if p.strip()]
             return normalize_rules(parts)
 
-    # 3) 单条
     return normalize_rules([s])
 
 
@@ -232,7 +233,6 @@ def list_rules(
         q = q.filter(SafetyRule.is_active == True)
     rules = q.order_by(SafetyRule.id.desc()).all()
 
-    # 数据库为空，给默认演示规则
     if not rules:
         demo = [
             {"id": 1, "rule_name": "裸露/性内容", "original_rule": "图像中出现了人物的生殖器或臀部未被遮挡",
@@ -249,7 +249,7 @@ def list_rules(
 def create_rule(payload: RuleCreateIn, db: Session = Depends(get_db)):
     name = (payload.rule_name or "").strip()
     if not name:
-        name = payload.original_rule.strip()[:20]  # 自动生成个短标题
+        name = payload.original_rule.strip()[:20]
 
     pre = payload.preconditions if isinstance(payload.preconditions, list) else []
     rule = SafetyRule(
@@ -296,8 +296,6 @@ def update_rule(rule_id: int, payload: RuleUpdateIn, db: Session = Depends(get_d
     if payload.is_active is not None:
         if bool(payload.is_active) != bool(rule.is_active):
             rule.is_active = bool(payload.is_active)
-            # 是否 active 改变不强制算“版本升级”，你也可以改成 True
-            # changed = True
 
     if changed:
         rule.version = (rule.version or 1) + 1
@@ -329,18 +327,11 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "data": {"deleted": rule_id}}
 
+
 # ============================================================
 # ✅ 规则客观化 / 预条件链生成（新增）
-# POST /api/rules/{rule_id}/objectify
-# - 没 key：走 mock（关键词映射 + 模板）
-# - 有 key：自动走 OpenAI（如果安装了 openai SDK 且设置了 OPENAI_API_KEY）
 # ============================================================
-
 def _load_keyword_triggers_from_settings() -> dict:
-    """
-    读取 settings.json 里的 keyword_triggers（如果存在）
-    不依赖你是否实现了 /api/settings，避免耦合。
-    """
     default_triggers = {
         "生殖器": ["生殖器", "裸露", "下体", "阴部", "性器官"],
         "暴力血腥": ["流血", "血腥", "残肢", "尸体", "濒死", "死亡", "严重受伤"],
@@ -354,7 +345,6 @@ def _load_keyword_triggers_from_settings() -> dict:
                 data = json.load(f) or {}
             kt = data.get("keyword_triggers")
             if isinstance(kt, dict) and kt:
-                # 清洗成 dict[str, list[str]]
                 cleaned = {}
                 for k, v in kt.items():
                     if not k:
@@ -371,22 +361,15 @@ def _load_keyword_triggers_from_settings() -> dict:
 
 
 def _mock_objectify_rule(original_rule: str, keyword_triggers: dict) -> List[str]:
-    """
-    无 key 时的最小可用客观化：
-    - 根据规则文本命中的类别关键词，生成 2~3 条“可观察条件”
-    - 输出为 List[str]，保证不破坏你前端现有展示（el-tag 直接显示字符串）
-    """
     text = (original_rule or "").strip()
     if not text:
         return []
 
-    # 1) 类别命中
     hit_categories = []
     for cat, kws in (keyword_triggers or {}).items():
         if isinstance(kws, list) and any(kw in text for kw in kws):
             hit_categories.append(str(cat))
 
-    # 2) 根据类别生成模板条件（你可以随时扩充）
     templates = {
         "生殖器": [
             "画面中出现人体私密部位（生殖器/阴部/乳头）可见",
@@ -411,10 +394,7 @@ def _mock_objectify_rule(original_rule: str, keyword_triggers: dict) -> List[str
         for s in templates.get(cat, []):
             pre.append(s)
 
-    # 3) 若没有命中类别，做一个“通用客观化”兜底（把句子拆成可观察陈述）
     if not pre:
-        # 简单拆分：避免引入复杂 NLP，保证稳定
-        # 例如 “出现A或B” -> 两条条件
         splitters = ["或", "以及", "并且", "且", "并", "、", "，", ","]
         parts = [text]
         for sp in splitters:
@@ -422,15 +402,12 @@ def _mock_objectify_rule(original_rule: str, keyword_triggers: dict) -> List[str
                 parts = [p.strip() for p in text.split(sp) if p.strip()]
                 break
 
-        # 生成最多 3 条
         for p in parts[:3]:
-            # 尽量改成“可观察”
             if p.startswith("图像") or p.startswith("图片") or p.startswith("画面"):
                 pre.append(p)
             else:
                 pre.append(f"画面中可观察到：{p}")
 
-    # 去重+裁剪
     seen = set()
     out = []
     for x in pre:
@@ -440,18 +417,10 @@ def _mock_objectify_rule(original_rule: str, keyword_triggers: dict) -> List[str
         seen.add(x)
         out.append(x)
 
-    return out[:6]  # 预条件太多没意义，控制一下
+    return out[:6]
 
 
 def _openai_objectify_rule(original_rule: str) -> Optional[List[str]]:
-    """
-    有 key 时的真实客观化（自动启用）：
-    - 你现在没 key，也不会影响运行：这里会优雅返回 None，系统自动回退 mock
-    - 未来你只要：
-        1) pip install openai
-        2) export OPENAI_API_KEY=xxx
-      就能丝滑切换到真实大模型客观化，不需要改其它业务代码。
-    """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return None
@@ -466,7 +435,6 @@ def _openai_objectify_rule(original_rule: str) -> Optional[List[str]]:
         return []
 
     model = os.getenv("OPENAI_RULE_OBJECTIFY_MODEL", "gpt-4o-mini")
-
     client = OpenAI()
 
     prompt = f"""
@@ -482,13 +450,10 @@ def _openai_objectify_rule(original_rule: str) -> Optional[List[str]]:
             model=model,
             input=prompt,
         )
-        # 兼容不同 SDK 输出：优先取 output_text
         text_out = getattr(resp, "output_text", None)
         if not text_out:
-            # 尝试从结构里拼
             text_out = str(resp)
 
-        # 期待是 JSON 数组
         arr = json.loads(text_out)
         if isinstance(arr, list):
             cleaned = [str(x).strip() for x in arr if str(x).strip()]
@@ -510,17 +475,12 @@ def objectify_rule(rule_id: int, db: Session = Depends(get_db)):
 
     keyword_triggers = _load_keyword_triggers_from_settings()
 
-    # 1) 先尝试 OpenAI（有 key 就自动用；没 key 自动回退）
     pre = _openai_objectify_rule(original)
 
-    # 2) 回退 mock
     if pre is None:
         pre = _mock_objectify_rule(original, keyword_triggers)
 
-    # 写回数据库（保持你当前 preconditions 是 List[str]，不破坏前端展示）
     rule.preconditions = json.dumps(pre, ensure_ascii=False)
-
-    # 客观化属于“内容更新”，版本 +1
     rule.version = (rule.version or 1) + 1
 
     db.add(rule)
@@ -528,6 +488,7 @@ def objectify_rule(rule_id: int, db: Session = Depends(get_db)):
     db.refresh(rule)
 
     return {"status": "success", "data": _rule_to_dict(rule)}
+
 
 # ============================================================
 # 2) 核心审核
@@ -553,6 +514,7 @@ async def moderate_image(
     try:
         audit_result = clue_algorithm(image_path=file_path, rules=rule_list)
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"审核引擎执行失败: {str(e)}")
 
     inference_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
@@ -596,7 +558,6 @@ def get_audit_tasks(limit: int = 10, db: Session = Depends(get_db)):
 
     data = []
     for t in tasks:
-        # 兼容 Windows 路径
         basename = os.path.basename(t.file_path) if t.file_path else ""
         img_url = f"http://127.0.0.1:8000/uploads/{basename}" if basename else None
         data.append(

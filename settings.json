@@ -1,5 +1,5 @@
 {
-  "clue_provider": "mock",
+  "clue_provider": "openai",
   "mock_hit_rate": 0.75,
   "mock_random_hit_rate": 0.2,
   "keyword_triggers": {
