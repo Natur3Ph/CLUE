@@ -144,7 +144,13 @@ class BenchmarkRun(Base):
     f1_score = Column(Float, default=0.0)
 
     avg_inference_time_ms = Column(Float, default=0.0)
+    status = Column(String(20), default="finished")   # running / finished / failed
+    progress = Column(Float, default=0.0)             # 0~100
+    finished_count = Column(Integer, default=0)       # 已完成样本数
+    error_message = Column(Text, nullable=True)       # 失败信息
 
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
     dataset = relationship("Dataset", back_populates="benchmark_runs")

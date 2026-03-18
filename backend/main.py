@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Query
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ from typing import List, Optional, Any
 
 from backend.models import (
     get_db,
+    SessionLocal,
     SafetyRule,
     AuditTask,
     ApiKey,
@@ -1059,18 +1060,30 @@ def _benchmark_run_to_dict(run: BenchmarkRun):
         "run_name": run.run_name,
         "dataset_id": run.dataset_id,
         "provider": run.provider or "mock",
+
+        "status": run.status or "finished",
+        "progress": float(run.progress or 0.0),
+        "finished_count": run.finished_count or 0,
+        "error_message": run.error_message or "",
+
         "total_count": run.total_count or 0,
         "safe_count": run.safe_count or 0,
         "unsafe_count": run.unsafe_count or 0,
+
         "tp": run.tp or 0,
         "tn": run.tn or 0,
         "fp": run.fp or 0,
         "fn": run.fn or 0,
+
         "accuracy": float(run.accuracy or 0.0),
         "precision": float(run.precision or 0.0),
         "recall": float(run.recall or 0.0),
         "f1_score": float(run.f1_score or 0.0),
+
         "avg_inference_time_ms": float(run.avg_inference_time_ms or 0.0),
+
+        "started_at": run.started_at.isoformat() if getattr(run, "started_at", None) else None,
+        "finished_at": run.finished_at.isoformat() if getattr(run, "finished_at", None) else None,
         "created_at": run.created_at.isoformat() if run.created_at else None,
     }
 
@@ -1094,7 +1107,243 @@ def _benchmark_item_to_dict(item: BenchmarkRunItem):
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
 
+def _run_benchmark_job(run_id: int):
+    """
+    Benchmark 后台异步执行任务：
+    - 独立创建数据库会话
+    - 更新 benchmark_runs.status/progress
+    - 跑完后写入统计结果
+    """
+    db = SessionLocal()
+    try:
+        run = db.query(BenchmarkRun).filter(BenchmarkRun.id == run_id).first()
+        if not run:
+            return
 
+        runtime_info = _apply_runtime_settings(db)
+
+        dataset = db.query(Dataset).filter(Dataset.id == run.dataset_id).first()
+        if not dataset:
+            run.status = "failed"
+            run.error_message = "数据集不存在"
+            run.finished_at = datetime.now()
+            db.commit()
+            return
+
+        dataset_items = (
+            db.query(DatasetItem)
+            .filter(DatasetItem.dataset_id == dataset.id)
+            .order_by(DatasetItem.id.asc())
+            .all()
+        )
+        if not dataset_items:
+            run.status = "failed"
+            run.error_message = "该数据集下没有样本，无法运行评测"
+            run.finished_at = datetime.now()
+            db.commit()
+            return
+
+        active_rules = (
+            db.query(SafetyRule)
+            .filter(SafetyRule.is_active == True)
+            .order_by(SafetyRule.id.asc())
+            .all()
+        )
+        if not active_rules:
+            run.status = "failed"
+            run.error_message = "当前没有启用中的规则，无法运行评测"
+            run.finished_at = datetime.now()
+            db.commit()
+            return
+
+        resolved_rules = []
+        for r in active_rules:
+            resolved_rules.append({
+                "rule_name": r.rule_name,
+                "original_rule": r.original_rule,
+                "objectified_rule": r.objectified_rule or "",
+                "preconditions": _safe_json_loads(r.preconditions, []),
+                "subjective_spans": _safe_json_loads(r.subjective_spans, []),
+                "observable_signals": _safe_json_loads(r.observable_signals, []),
+                "objectiveness_score": float(r.objectiveness_score or 0.0),
+            })
+
+        provider = runtime_info["provider"]
+
+        total = len(dataset_items)
+        safe_count = 0
+        unsafe_count = 0
+        tp = tn = fp = fn = 0
+        total_inference_time = 0
+
+        run.provider = provider
+        run.status = "running"
+        run.progress = 0.0
+        run.finished_count = 0
+        run.error_message = ""
+        run.total_count = total
+        run.started_at = datetime.now()
+        run.finished_at = None
+        db.commit()
+
+        # 为了防止重复运行同一个 run，先删掉旧 item（正常不会有，但这样更稳）
+        db.query(BenchmarkRunItem).filter(BenchmarkRunItem.run_id == run.id).delete()
+        db.commit()
+
+        for idx, item in enumerate(dataset_items, start=1):
+            start_time = datetime.now()
+            try:
+                audit_result = clue_algorithm(image_path=item.file_path, rules=resolved_rules)
+            except Exception as e:
+                audit_result = {
+                    "is_safe": True,
+                    "violated_rules": [],
+                    "explanation": {"error": str(e)}
+                }
+
+            inference_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            total_inference_time += inference_time_ms
+
+            predicted_is_safe = bool(audit_result.get("is_safe", True))
+            predicted_rules = audit_result.get("violated_rules", [])
+            ground_truth_is_safe = bool(item.ground_truth_is_safe)
+
+            hit = predicted_is_safe == ground_truth_is_safe
+
+            if ground_truth_is_safe:
+                safe_count += 1
+                if predicted_is_safe:
+                    tn += 1
+                else:
+                    fp += 1
+            else:
+                unsafe_count += 1
+                if predicted_is_safe:
+                    fn += 1
+                else:
+                    tp += 1
+
+            run_item = BenchmarkRunItem(
+                run_id=run.id,
+                dataset_item_id=item.id,
+                predicted_is_safe=predicted_is_safe,
+                predicted_rules=json.dumps(predicted_rules, ensure_ascii=False),
+                hit=hit,
+                inference_time_ms=inference_time_ms,
+                raw_explanation=json.dumps(audit_result.get("explanation", {}), ensure_ascii=False),
+            )
+            db.add(run_item)
+
+            run.finished_count = idx
+            run.progress = round(idx / total * 100, 2) if total > 0 else 0.0
+            db.commit()
+
+        accuracy = _safe_div(tp + tn, total)
+        precision = _safe_div(tp, tp + fp)
+        recall = _safe_div(tp, tp + fn)
+        f1_score = 0.0 if (precision + recall) == 0 else round(2 * precision * recall / (precision + recall), 4)
+        avg_inference_time_ms = round(total_inference_time / total, 2) if total > 0 else 0.0
+
+        run.total_count = total
+        run.safe_count = safe_count
+        run.unsafe_count = unsafe_count
+        run.tp = tp
+        run.tn = tn
+        run.fp = fp
+        run.fn = fn
+        run.accuracy = accuracy
+        run.precision = precision
+        run.recall = recall
+        run.f1_score = f1_score
+        run.avg_inference_time_ms = avg_inference_time_ms
+
+        run.progress = 100.0
+        run.finished_count = total
+        run.status = "finished"
+        run.error_message = ""
+        run.finished_at = datetime.now()
+
+        db.commit()
+
+    except Exception as e:
+        try:
+            run = db.query(BenchmarkRun).filter(BenchmarkRun.id == run_id).first()
+            if run:
+                run.status = "failed"
+                run.error_message = str(e)
+                run.finished_at = datetime.now()
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        db.close()
+@app.post("/api/benchmarks/run/async")
+def run_benchmark_async(
+    payload: BenchmarkRunIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    runtime_info = _apply_runtime_settings(db)
+
+    dataset = db.query(Dataset).filter(Dataset.id == payload.dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="数据集不存在")
+
+    dataset_items = (
+        db.query(DatasetItem)
+        .filter(DatasetItem.dataset_id == dataset.id)
+        .order_by(DatasetItem.id.asc())
+        .all()
+    )
+    if not dataset_items:
+        raise HTTPException(status_code=400, detail="该数据集下没有样本，无法运行评测")
+
+    active_rules = (
+        db.query(SafetyRule)
+        .filter(SafetyRule.is_active == True)
+        .order_by(SafetyRule.id.asc())
+        .all()
+    )
+    if not active_rules:
+        raise HTTPException(status_code=400, detail="当前没有启用中的规则，无法运行评测")
+
+    run = BenchmarkRun(
+        run_name=(payload.run_name or "").strip(),
+        dataset_id=dataset.id,
+        provider=runtime_info["provider"],
+
+        status="running",
+        progress=0.0,
+        finished_count=0,
+        error_message="",
+
+        total_count=len(dataset_items),
+        safe_count=0,
+        unsafe_count=0,
+        tp=0,
+        tn=0,
+        fp=0,
+        fn=0,
+        accuracy=0.0,
+        precision=0.0,
+        recall=0.0,
+        f1_score=0.0,
+        avg_inference_time_ms=0.0,
+
+        started_at=datetime.now(),
+        finished_at=None,
+
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+
+    background_tasks.add_task(_run_benchmark_job, run.id)
+
+    return {
+        "status": "success",
+        "data": _benchmark_run_to_dict(run)
+    }
 @app.post("/api/benchmarks/run")
 def run_benchmark(payload: BenchmarkRunIn, db: Session = Depends(get_db)):
     runtime_info = _apply_runtime_settings(db)
@@ -1151,6 +1400,12 @@ def run_benchmark(payload: BenchmarkRunIn, db: Session = Depends(get_db)):
         recall=0.0,
         f1_score=0.0,
         avg_inference_time_ms=0.0,
+        status="finished",
+        progress=100.0,
+        finished_count=0,
+        error_message="",
+        started_at=datetime.now(),
+        finished_at=None,
     )
     db.add(run)
     db.flush()
@@ -1223,6 +1478,11 @@ def run_benchmark(payload: BenchmarkRunIn, db: Session = Depends(get_db)):
     run.recall = recall
     run.f1_score = f1_score
     run.avg_inference_time_ms = avg_inference_time_ms
+    run.status = "finished"
+    run.progress = 100.0
+    run.finished_count = total
+    run.error_message = ""
+    run.finished_at = datetime.now()
 
     db.commit()
     db.refresh(run)

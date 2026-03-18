@@ -20,3 +20,8 @@ export function fetchBenchmarkRuns() {
 export function fetchBenchmarkRunDetail(runId) {
   return request.get(`/api/benchmarks/runs/${runId}`)
 }
+
+// 启动异步 Benchmark
+export function runBenchmarkAsync(data) {
+  return request.post('/api/benchmarks/run/async', data)
+}

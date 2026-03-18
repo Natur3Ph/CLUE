@@ -45,10 +45,14 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" :loading="running" @click="handleRunBenchmark">
-            开始评测
-          </el-button>
-        </el-form-item>
+  <el-button type="primary" :loading="running" @click="handleRunBenchmark">
+    开始评测
+  </el-button>
+</el-form-item>
+
+<el-form-item v-if="polling">
+  <el-tag type="warning">后台评测进行中</el-tag>
+</el-form-item>
       </el-form>
 
       <div class="form-tip">
@@ -206,6 +210,33 @@
               <el-descriptions-item label="Provider">
                 {{ selectedRunDetail.provider }}
               </el-descriptions-item>
+              <el-descriptions-item label="任务状态">
+  <el-tag
+    :type="
+      selectedRunDetail.status === 'finished'
+        ? 'success'
+        : selectedRunDetail.status === 'failed'
+        ? 'danger'
+        : 'warning'
+    "
+  >
+    {{
+      selectedRunDetail.status === 'finished'
+        ? '已完成'
+        : selectedRunDetail.status === 'failed'
+        ? '失败'
+        : '运行中'
+    }}
+  </el-tag>
+</el-descriptions-item>
+
+<el-descriptions-item label="执行进度">
+  {{ selectedRunDetail.progress || 0 }}%
+</el-descriptions-item>
+
+<el-descriptions-item label="已完成样本数">
+  {{ selectedRunDetail.finished_count || 0 }}
+</el-descriptions-item>
               <el-descriptions-item label="总样本数">
                 {{ selectedRunDetail.total_count }}
               </el-descriptions-item>
@@ -236,6 +267,12 @@
               <el-descriptions-item label="平均推理耗时">
                 {{ selectedRunDetail.avg_inference_time_ms }} ms
               </el-descriptions-item>
+              <el-descriptions-item
+  v-if="selectedRunDetail.error_message"
+  label="失败原因"
+>
+  {{ selectedRunDetail.error_message }}
+</el-descriptions-item>
             </el-descriptions>
 
             <div class="wrong-box">
@@ -284,11 +321,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   fetchDatasets,
-  runBenchmark,
+  runBenchmarkAsync,
   fetchBenchmarkRuns,
   fetchBenchmarkRunDetail,
 } from '../api/benchmark'
@@ -299,6 +336,9 @@ const selectedRunDetail = ref(null)
 
 const loadingRuns = ref(false)
 const running = ref(false)
+
+let pollTimer = null
+const polling = ref(false)
 
 const runForm = ref({
   dataset_id: null,
@@ -346,6 +386,45 @@ const formatDateTime = (value) => {
   return String(value).replace('T', ' ').slice(0, 19)
 }
 
+const stopPolling = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+  polling.value = false
+}
+
+const startPolling = (runId) => {
+  stopPolling()
+  polling.value = true
+
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await fetchBenchmarkRunDetail(runId)
+      const detail = res?.data || null
+      selectedRunDetail.value = detail
+
+      // 同步刷新左侧记录列表
+      await loadBenchmarkRuns()
+
+      if (!detail) return
+
+      if (detail.status === 'finished' || detail.status === 'failed') {
+        stopPolling()
+
+        if (detail.status === 'finished') {
+          ElMessage.success('Benchmark 评测已完成')
+        } else if (detail.status === 'failed') {
+          ElMessage.error(detail.error_message || 'Benchmark 评测失败')
+        }
+      }
+    } catch (err) {
+      console.error('轮询 Benchmark 状态失败：', err)
+      stopPolling()
+    }
+  }, 2000)
+}
+
 const loadDatasets = async () => {
   try {
     const res = await fetchDatasets()
@@ -379,22 +458,23 @@ const handleRunBenchmark = async () => {
 
   running.value = true
   try {
-    const res = await runBenchmark({
+    const res = await runBenchmarkAsync({
       dataset_id: runForm.value.dataset_id,
       run_name: runForm.value.run_name.trim(),
     })
 
-    // 注意：request.js 已经统一 return res.data
     const run = res?.data || null
-
-    ElMessage.success('Benchmark 运行成功')
-    await loadBenchmarkRuns()
-
-    if (run && run.id) {
-      await handleViewDetail(run)
+    if (!run || !run.id) {
+      throw new Error('异步评测任务创建失败')
     }
+
+    ElMessage.success('Benchmark 任务已提交，后台正在运行')
+    selectedRunDetail.value = run
+
+    await loadBenchmarkRuns()
+    startPolling(run.id)
   } catch (err) {
-    console.error('运行 Benchmark 失败：', err)
+    console.error('启动异步 Benchmark 失败：', err)
     ElMessage.error(err?.response?.data?.detail || err?.message || '运行 Benchmark 失败')
   } finally {
     running.value = false
@@ -404,7 +484,14 @@ const handleRunBenchmark = async () => {
 const handleViewDetail = async (row) => {
   try {
     const res = await fetchBenchmarkRunDetail(row.id)
-    selectedRunDetail.value = res?.data || null
+    const detail = res?.data || null
+    selectedRunDetail.value = detail
+
+    if (detail?.status === 'running') {
+      startPolling(detail.id)
+    } else {
+      stopPolling()
+    }
   } catch (err) {
     console.error('获取评测详情失败：', err)
     ElMessage.error(err?.response?.data?.detail || err?.message || '获取评测详情失败')
@@ -414,6 +501,9 @@ const handleViewDetail = async (row) => {
 onMounted(async () => {
   await loadDatasets()
   await loadBenchmarkRuns()
+  onBeforeUnmount(() => {
+  stopPolling()
+})
 })
 </script>
 
