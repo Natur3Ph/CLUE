@@ -95,6 +95,7 @@ def load_settings() -> dict:
         save_settings(DEFAULT_SETTINGS)
         return DEFAULT_SETTINGS
 
+
 def _apply_runtime_settings(db: Session = None):
     """
     把 settings.json + 环境变量 + 数据库 ApiKey 同步到 clue_algorithm 运行时。
@@ -149,6 +150,7 @@ def _apply_runtime_settings(db: Session = None):
         "api_key_configured": bool(api_key),
     }
 
+
 class SettingsIn(BaseModel):
     clue_provider: str = Field(default="mock")
     mock_hit_rate: float = Field(default=0.75, ge=0.0, le=1.0)
@@ -160,6 +162,12 @@ class SettingsIn(BaseModel):
     openai_objectify_model: str = Field(default="gpt-4o-mini")
 
     keyword_triggers: dict = Field(default_factory=dict)
+
+
+# ✅ 新增：用于“测试连接”接口的请求体
+class SettingsTestIn(BaseModel):
+    openai_base_url: str = Field(default="https://api.openai.com/v1")
+    openai_model: str = Field(default="gpt-4o-mini")
 
 
 @app.get("/api/settings")
@@ -233,6 +241,80 @@ def update_settings(payload: SettingsIn):
             "api_key_configured": runtime_info["api_key_configured"],
         }
     }
+
+
+# ✅ 新增：测试模型连接接口（只做增量，不影响其他功能）
+@app.post("/api/settings/test-connection")
+def test_model_connection(payload: SettingsTestIn, db: Session = Depends(get_db)):
+    """
+    测试当前 OpenAI 兼容接口是否可连接。
+    这里只做轻量级连通性检查，不执行真实图像审核。
+    """
+    import requests
+    from time import perf_counter
+
+    # 同步运行时配置，拿到 API Key
+    _apply_runtime_settings(db)
+    api_key = clue_runtime.OPENAI_API_KEY
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="未检测到可用的 API Key，请先在后端配置。")
+
+    base_url = (payload.openai_base_url or "").strip().rstrip("/")
+    model = (payload.openai_model or "").strip()
+
+    if not base_url:
+        raise HTTPException(status_code=400, detail="openai_base_url 不能为空")
+    if not model:
+        raise HTTPException(status_code=400, detail="openai_model 不能为空")
+
+    url = f"{base_url}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": "Reply with OK only."}
+        ],
+        "max_completion_tokens": 5,
+    }
+
+    start = perf_counter()
+    try:
+        resp = requests.post(url, headers=headers, json=body, timeout=30)
+        elapsed_ms = int((perf_counter() - start) * 1000)
+
+        if resp.status_code >= 400:
+            raise HTTPException(
+                status_code=400,
+                detail=f"连接失败：HTTP {resp.status_code} - {resp.text[:300]}"
+            )
+
+        data = resp.json()
+        content = ""
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "data": {
+                "connected": True,
+                "model": model,
+                "base_url": base_url,
+                "response_time_ms": elapsed_ms,
+                "message": "连接成功",
+                "reply_preview": content,
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"测试连接失败：{str(e)}")
 
 
 # ============================================================
@@ -781,6 +863,7 @@ def delete_audit_task(task_id: str, db: Session = Depends(get_db)):
         }
     }
 
+
 # ============================================================
 # 4) 数据集测试系统：Dataset API（新增）
 # ============================================================
@@ -954,6 +1037,7 @@ async def upload_dataset_items(
             "items": [_dataset_item_to_dict(x) for x in saved_items]
         }
     }
+
 
 # ============================================================
 # 5) 数据集测试系统：Benchmark API（新增）

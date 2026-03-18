@@ -8,6 +8,7 @@ import Settings from '../views/Settings.vue'
 import UserManage from '../views/UserManage.vue'
 import CreateTask from '../views/CreateTask.vue'
 import TaskDetail from '../views/TaskDetail.vue'
+import Benchmark from '../views/Benchmark.vue'
 
 const routes = [
   {
@@ -31,9 +32,13 @@ const routes = [
     path: '/tasks/:id',
     component: TaskDetail
   },
-  {
+    {
     path: '/rules',
     component: RuleManage
+  },
+  {
+    path: '/benchmark',
+    component: Benchmark
   },
   {
     path: '/settings',

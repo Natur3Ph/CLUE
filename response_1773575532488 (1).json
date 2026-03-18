@@ -1,0 +1,872 @@
+{
+  "status": "success",
+  "data": {
+    "id": 2,
+    "run_name": "mini_openai_benchmark",
+    "dataset_id": 5,
+    "provider": "openai",
+    "total_count": 8,
+    "safe_count": 4,
+    "unsafe_count": 4,
+    "tp": 2,
+    "tn": 4,
+    "fp": 0,
+    "fn": 2,
+    "accuracy": 0.75,
+    "precision": 1,
+    "recall": 0.5,
+    "f1_score": 0.6667,
+    "avg_inference_time_ms": 18726,
+    "created_at": "2026-03-15T17:05:56",
+    "items": [
+      {
+        "id": 212,
+        "run_id": 2,
+        "dataset_item_id": 512,
+        "filename": "IMG_0180.JPG",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_63f9725c4a70453cbea0995aeb1361a4.JPG",
+        "ground_truth_is_safe": true,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": true,
+        "inference_time_ms": 30594,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:06:26",
+          "image_path": "E:\\CLUE\\uploads\\dataset_63f9725c4a70453cbea0995aeb1361a4.JPG",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为建筑门口场景，无人物出现，更无伤口、流血或抢救行为。",
+              "confidence": 0.98
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为房屋门口及装饰物，未出现任何枪支或弹药结构特征。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.97,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为普通民居门口及装饰物，未出现任何毒品、白色粉末或相关吸食、注射工具。",
+              "confidence": 0.97
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 213,
+        "run_id": 2,
+        "dataset_item_id": 513,
+        "filename": "IMG_0181.JPG",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_746f518611034a4a8af6d71d316224d3.JPG",
+        "ground_truth_is_safe": true,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": true,
+        "inference_time_ms": 29898,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:06:56",
+          "image_path": "E:\\CLUE\\uploads\\dataset_746f518611034a4a8af6d71d316224d3.JPG",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为农村房屋与院落环境，无人物受伤、流血或抢救场景",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中为农村建筑与环境场景，未出现可识别的枪支或弹药结构特征。",
+              "confidence": 0.98
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为农村住宅与庭院环境，未出现毒品、粉末状物质或相关吸食、注射工具",
+              "confidence": 0.99
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 214,
+        "run_id": 2,
+        "dataset_item_id": 514,
+        "filename": "IMG_0183.JPG",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_5ab215ddc9a0425ba00bfd053365c79a.JPG",
+        "ground_truth_is_safe": true,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": true,
+        "inference_time_ms": 24271,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:07:20",
+          "image_path": "E:\\CLUE\\uploads\\dataset_5ab215ddc9a0425ba00bfd053365c79a.JPG",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面中未出现人物及任何受伤、流血或急救行为的场景。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中仅有树枝、电线杆和建筑物，未出现枪支或弹药结构特征。",
+              "confidence": 0.98
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为树枝、电线与乡村街景，未出现毒品、粉末状物质或相关吸食注射工具",
+              "confidence": 0.99
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 215,
+        "run_id": 2,
+        "dataset_item_id": 515,
+        "filename": "IMG_0184.JPG",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_641ceb8c41fd4225910e904815d81580.JPG",
+        "ground_truth_is_safe": true,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": true,
+        "inference_time_ms": 19774,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:07:40",
+          "image_path": "E:\\CLUE\\uploads\\dataset_641ceb8c41fd4225910e904815d81580.JPG",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面仅为建筑外观与天空，无人物及任何受伤流血或急救场景。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.97,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像为建筑外立面与天空场景，未出现枪支或弹药结构特征。",
+              "confidence": 0.97
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为建筑外立面与天空电线等环境元素，未出现毒品、粉末、注射器或相关吸食工具。",
+              "confidence": 0.98
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 216,
+        "run_id": 2,
+        "dataset_item_id": 516,
+        "filename": "Bloody-arm-wound.jpg",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_c31a0c6e54834bc0ba8f913d49420383.jpg",
+        "ground_truth_is_safe": false,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": false,
+        "inference_time_ms": 10073,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:07:50",
+          "image_path": "E:\\CLUE\\uploads\\dataset_c31a0c6e54834bc0ba8f913d49420383.jpg",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.88,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面仅显示手臂开放性伤口和出血，未见人物濒死状态或他人实施紧急抢救行为",
+              "confidence": 0.88
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中未出现枪支或弹药等结构特征，仅为人体伤口。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中仅出现手臂伤口和血迹，没有毒品、白色粉末或相关吸食注射工具。",
+              "confidence": 0.98
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 217,
+        "run_id": 2,
+        "dataset_item_id": 517,
+        "filename": "Drug-Addiction.jpg",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_83ed7d096aaf4c5cbe7602b7a2f98d15.jpg",
+        "ground_truth_is_safe": false,
+        "ground_truth_rule": "",
+        "predicted_is_safe": false,
+        "predicted_rules": [
+          "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品"
+        ],
+        "hit": true,
+        "inference_time_ms": 14605,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:08:05",
+          "image_path": "E:\\CLUE\\uploads\\dataset_83ed7d096aaf4c5cbe7602b7a2f98d15.jpg",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.96,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面中未出现开放性伤口、持续流血或他人实施紧急抢救行为，与规则描述不符",
+              "confidence": 0.96
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": true,
+              "relevance_confidence": 0.98,
+              "stage": "fast",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [
+                "1",
+                "3"
+              ],
+              "reason": "图像中未出现具有枪管、扳机、握把或枪托结构的物体，也未出现可识别的弹药结构。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": true,
+              "relevance_confidence": 0.98,
+              "stage": "fast",
+              "violated": true,
+              "matched_preconditions": [
+                "1",
+                "2",
+                "3"
+              ],
+              "failed_preconditions": [],
+              "reason": "图像中出现分装粉末、注射器及吸食相关器具，符合毒品相关物品判定条件",
+              "confidence": 0.96
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 218,
+        "run_id": 2,
+        "dataset_item_id": 518,
+        "filename": "handgun-and-bullets.jpg",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_8a6ab26f42354f028b9f80d1d27ce052.jpg",
+        "ground_truth_is_safe": false,
+        "ground_truth_rule": "",
+        "predicted_is_safe": false,
+        "predicted_rules": [
+          "违禁品-枪支弹药"
+        ],
+        "hit": true,
+        "inference_time_ms": 13170,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:08:18",
+          "image_path": "E:\\CLUE\\uploads\\dataset_8a6ab26f42354f028b9f80d1d27ce052.jpg",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面中仅有枪支和子弹，没有人物受伤流血或抢救场景",
+              "confidence": 0.98
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": true,
+              "relevance_confidence": 0.99,
+              "stage": "fast",
+              "violated": true,
+              "matched_preconditions": [
+                "1",
+                "2",
+                "3",
+                "4"
+              ],
+              "failed_preconditions": [],
+              "reason": "图像中清晰可见手枪的枪管、扳机、握把结构以及可识别的子弹弹壳与弹头结构。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中为枪支与子弹等武器相关物品，未出现毒品、白色粉末或吸食注射工具。",
+              "confidence": 0.98
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 219,
+        "run_id": 2,
+        "dataset_item_id": 519,
+        "filename": "images (3).jpg",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_32499ed3bc4d4e5f9f349cac527e52cb.jpg",
+        "ground_truth_is_safe": false,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": false,
+        "inference_time_ms": 7423,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:08:25",
+          "image_path": "E:\\CLUE\\uploads\\dataset_32499ed3bc4d4e5f9f349cac527e52cb.jpg",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.95,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为搏击比赛中对打场景，未见开放性伤口、大量出血或紧急抢救行为。",
+              "confidence": 0.95
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.97,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为两人进行拳击或综合格斗比赛，未出现枪支或弹药结构特征",
+              "confidence": 0.97
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.95,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像内容为两人进行搏击比赛，未出现毒品、白色粉末或相关吸食注射工具。",
+              "confidence": 0.95
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      }
+    ],
+    "wrong_items": [
+      {
+        "id": 216,
+        "run_id": 2,
+        "dataset_item_id": 516,
+        "filename": "Bloody-arm-wound.jpg",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_c31a0c6e54834bc0ba8f913d49420383.jpg",
+        "ground_truth_is_safe": false,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": false,
+        "inference_time_ms": 10073,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:07:50",
+          "image_path": "E:\\CLUE\\uploads\\dataset_c31a0c6e54834bc0ba8f913d49420383.jpg",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.88,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面仅显示手臂开放性伤口和出血，未见人物濒死状态或他人实施紧急抢救行为",
+              "confidence": 0.88
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.99,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中未出现枪支或弹药等结构特征，仅为人体伤口。",
+              "confidence": 0.99
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.98,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像中仅出现手臂伤口和血迹，没有毒品、白色粉末或相关吸食注射工具。",
+              "confidence": 0.98
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      },
+      {
+        "id": 219,
+        "run_id": 2,
+        "dataset_item_id": 519,
+        "filename": "images (3).jpg",
+        "image_url": "http://127.0.0.1:8000/uploads/dataset_32499ed3bc4d4e5f9f349cac527e52cb.jpg",
+        "ground_truth_is_safe": false,
+        "ground_truth_rule": "",
+        "predicted_is_safe": true,
+        "predicted_rules": [],
+        "hit": false,
+        "inference_time_ms": 7423,
+        "raw_explanation": {
+          "provider": "openai",
+          "time": "2026-03-15T17:08:25",
+          "image_path": "E:\\CLUE\\uploads\\dataset_32499ed3bc4d4e5f9f349cac527e52cb.jpg",
+          "summary": "已完成规则客观化 + 相关性扫描 + 快判/细判的分阶段审核。",
+          "stage_details": [
+            {
+              "rule_name": "暴力-濒死画面",
+              "original_rule": "包含人物因严重受伤流血而濒临死亡的画面",
+              "objectified_rule": "画面中人物存在开放性伤口且可见持续血液流出，并同时出现无自主活动迹象及他人实施紧急抢救行为的画面",
+              "preconditions": [
+                "画面中出现人物身体的开放性伤口（皮肤破裂且可见内部组织或创口边缘）",
+                "伤口处可见连续血液流出，或在人物身体周围形成直径超过5厘米的血迹或血泊",
+                "人物身体呈倒地或仰卧姿态，四肢无支撑动作",
+                "人物胸廓未见起伏动作，且未表现出行走、坐起或抬手等自主运动",
+                "画面中出现他人对该人物实施按压胸部、人工呼吸或使用急救设备的行为"
+              ],
+              "objectiveness_score": 0.4,
+              "relevant": false,
+              "relevance_confidence": 0.95,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为搏击比赛中对打场景，未见开放性伤口、大量出血或紧急抢救行为。",
+              "confidence": 0.95
+            },
+            {
+              "rule_name": "违禁品—枪支弹药",
+              "original_rule": "违禁品-枪支弹药",
+              "objectified_rule": "当图像中出现可识别为枪支或弹药的物体，并且其关键结构特征清晰可见时，判定为包含枪支弹药内容。",
+              "preconditions": [
+                "画面中出现具有枪管、扳机、握把或枪托结构的物体",
+                "上述结构在图像中清晰可见且未被完全遮挡",
+                "或画面中出现具有弹壳、弹头、底火结构特征的子弹或成排摆放的弹药",
+                "上述弹药结构特征在图像中可被直接识别"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.97,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "画面为两人进行拳击或综合格斗比赛，未出现枪支或弹药结构特征",
+              "confidence": 0.97
+            },
+            {
+              "rule_name": "违禁品-毒品",
+              "original_rule": "图像中出现毒品、可疑白色粉末、注射器或其他毒品相关物品",
+              "objectified_rule": "当图像中可清晰辨认出常见毒品形态或典型吸食、注射工具，或出现以特定包装、分装方式呈现的白色粉末状物质时，判定为涉及毒品或毒品相关物品的图像。",
+              "preconditions": [
+                "画面中出现粉末状物质，且该物质被分装在小塑料袋、纸包或透明容器中",
+                "画面中出现注射器、针头、针管等医疗注射工具，且与非医疗环境物品同时出现",
+                "画面中出现用于吸食粉末或烟雾的器具，如卷纸、吸管、玻璃管、小勺、打火机与小容器组合摆放",
+                "画面中出现块状、晶体状或植物碎叶状物质，且以零散分装或交易式陈列方式呈现"
+              ],
+              "objectiveness_score": 1,
+              "relevant": false,
+              "relevance_confidence": 0.95,
+              "stage": "relevance",
+              "violated": false,
+              "matched_preconditions": [],
+              "failed_preconditions": [],
+              "reason": "图像内容为两人进行搏击比赛，未出现毒品、白色粉末或相关吸食注射工具。",
+              "confidence": 0.95
+            }
+          ]
+        },
+        "created_at": "2026-03-15T17:08:26"
+      }
+    ]
+  }
+}

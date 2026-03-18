@@ -1,152 +1,153 @@
 <template>
-  <el-card>
-    <template #header>
-      <div class="toolbar">
-        <div class="left-tools">
-          <span class="title">规则管理</span>
-
-          <div class="switch-wrap">
-            <span>仅启用</span>
-            <el-switch v-model="onlyActive" @change="loadRules" />
-            <el-link type="primary" @click="toggleShowAll">
-              {{ onlyActive ? '显示全部' : '仅看启用' }}
-            </el-link>
-          </div>
-        </div>
-
-        <div class="right-tools">
-          <el-input
-            v-model="keyword"
-            placeholder="搜索：规则名称 / 原始规则"
-            clearable
-            class="search-input"
-          />
-          <el-button type="primary" @click="openCreate">新增规则</el-button>
-          <el-button @click="loadRules">刷新</el-button>
+  <div class="rule-page">
+    <!-- 顶部说明区 -->
+    <div class="page-banner">
+      <div>
+        <div class="page-title">规则管理</div>
+        <div class="page-desc">
+          统一维护图像审核规则，支持规则创建、编辑、启停、删除与一键客观化。
         </div>
       </div>
-    </template>
 
-    <el-table
-      :data="filteredRules"
-      v-loading="loading"
-      border
-      stripe
-      style="width: 100%"
-      row-key="id"
-    >
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="rule_name" label="规则名称" width="160" />
-
-      <el-table-column label="原始规则" min-width="240">
-        <template #default="{ row }">
-          <div class="text-block">{{ row.original_rule }}</div>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="客观化规则" min-width="260">
-        <template #default="{ row }">
-          <div v-if="row.objectified_rule" class="text-block objectified">
-            {{ row.objectified_rule }}
-          </div>
-          <el-tag v-else type="info">尚未客观化</el-tag>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="主观词" min-width="180">
-        <template #default="{ row }">
-          <div
-            v-if="row.subjective_spans && row.subjective_spans.length > 0"
-            class="tag-wrap"
-          >
-            <el-tag
-              v-for="(item, idx) in row.subjective_spans"
-              :key="idx"
-              size="small"
-              type="warning"
-            >
-              {{ item }}
-            </el-tag>
-          </div>
-          <el-tag v-else type="success" size="small">无主观词</el-tag>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="可观察信号" min-width="180">
-        <template #default="{ row }">
-          <div
-            v-if="row.observable_signals && row.observable_signals.length > 0"
-            class="tag-wrap"
-          >
-            <el-tag
-              v-for="(item, idx) in row.observable_signals"
-              :key="idx"
-              size="small"
-              type="info"
-            >
-              {{ item }}
-            </el-tag>
-          </div>
-          <span v-else class="muted">暂无</span>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="预条件链" min-width="260">
-        <template #default="{ row }">
-          <div v-if="row.preconditions && row.preconditions.length > 0" class="tag-wrap">
-            <el-tag
-              v-for="(item, idx) in row.preconditions"
-              :key="idx"
-              size="small"
-              effect="plain"
-            >
-              {{ item }}
-            </el-tag>
-          </div>
-          <el-tag v-else type="info" size="small">暂无预条件</el-tag>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="启用" width="90" align="center">
-        <template #default="{ row }">
-          <el-switch
-            v-model="row.is_active"
-            @change="(val) => handleToggleActive(row, val)"
-          />
-        </template>
-      </el-table-column>
-
-      <el-table-column label="操作" width="260" fixed="right">
-        <template #default="{ row }">
-          <div class="action-wrap">
-            <el-button size="small" @click="openEdit(row)">编辑</el-button>
-            <el-button
-              size="small"
-              type="success"
-              :loading="objectifyingId === row.id"
-              @click="handleObjectify(row)"
-            >
-              一键客观化
-            </el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">
-              删除
-            </el-button>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <div class="footer-tip">
-      当前显示 {{ filteredRules.length }} 条（共 {{ rules.length }} 条）
+      <div class="page-actions">
+        <el-button @click="loadRules" :loading="loading">刷新数据</el-button>
+        <el-button type="primary" @click="openCreateDialog">新建规则</el-button>
+      </div>
     </div>
 
+    <!-- 顶部统计 -->
+    <el-row :gutter="16" class="section-row">
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card stat-total" shadow="hover">
+          <div class="stat-label">规则总数</div>
+          <div class="stat-value">{{ stats.total }}</div>
+          <div class="stat-sub">系统当前已配置规则数</div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card stat-active" shadow="hover">
+          <div class="stat-label">启用规则</div>
+          <div class="stat-value">{{ stats.active }}</div>
+          <div class="stat-sub">参与审核流程的规则数</div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card stat-object" shadow="hover">
+          <div class="stat-label">已客观化</div>
+          <div class="stat-value">{{ stats.objectified }}</div>
+          <div class="stat-sub">已生成客观化结果的规则数</div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card class="stat-card stat-score" shadow="hover">
+          <div class="stat-label">平均客观化评分</div>
+          <div class="stat-value">{{ stats.avgScore }}</div>
+          <div class="stat-sub">基于当前已加载规则计算</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 表格 -->
+    <el-card class="table-card" shadow="never">
+      <template #header>
+        <div class="table-header">
+          <div>
+            <div class="card-title">规则列表</div>
+            <div class="card-subtitle">支持查看原始规则、客观化结果、预条件链与规则版本</div>
+          </div>
+          <div class="table-summary">当前显示 {{ rules.length }} 条规则</div>
+        </div>
+      </template>
+
+      <el-table
+        :data="rules"
+        v-loading="loading"
+        border
+        class="rule-table"
+        style="width: 100%"
+      >
+        <el-table-column prop="rule_name" label="规则名称" min-width="220" />
+
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.is_active ? 'success' : 'info'" effect="light">
+              {{ row.is_active ? '启用' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="客观化评分" width="120">
+          <template #default="{ row }">
+            <span>{{ formatScore(row.objectiveness_score) }}</span>
+          </template>
+        </el-table-column>
+
+
+        <el-table-column label="原始规则" min-width="260" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.original_rule || '-' }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="客观化规则" min-width="260" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.objectified_rule || '未客观化' }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="预条件数" width="100">
+          <template #default="{ row }">
+            {{ Array.isArray(row.preconditions) ? row.preconditions.length : 0 }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="更新时间" min-width="170">
+          <template #default="{ row }">
+            {{ formatDateTime(row.updated_at || row.created_at) }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="260" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openDetailDialog(row)">
+              查看
+            </el-button>
+            <el-button link type="primary" @click="openEditDialog(row)">
+              编辑
+            </el-button>
+            <el-button
+              link
+              type="warning"
+              :loading="objectifyLoadingId === row.id"
+              @click="handleObjectify(row)"
+            >
+              客观化
+            </el-button>
+            <el-button link type="danger" @click="handleDelete(row)">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-empty
+        v-if="!loading && rules.length === 0"
+        description="暂无规则数据"
+        class="empty-block"
+      />
+    </el-card>
+
+    <!-- 新建/编辑弹窗 -->
     <el-dialog
-      v-model="dialogVisible"
-      :title="editingId ? '编辑规则' : '新增规则'"
-      width="720px"
+      v-model="formDialogVisible"
+      :title="isEdit ? '编辑规则' : '新建规则'"
+      width="760px"
       destroy-on-close
     >
-      <el-form label-width="100px">
+      <el-form :model="form" label-width="92px">
         <el-form-item label="规则名称">
           <el-input v-model="form.rule_name" placeholder="请输入规则名称" />
         </el-form-item>
@@ -156,7 +157,7 @@
             v-model="form.original_rule"
             type="textarea"
             :rows="4"
-            placeholder="请输入原始规则"
+            placeholder="请输入原始规则描述"
           />
         </el-form-item>
 
@@ -165,27 +166,116 @@
             v-model="preconditionsText"
             type="textarea"
             :rows="5"
-            placeholder='请输入 JSON 数组，如 ["画面中出现...","...未被遮挡"]'
+            placeholder="一行一个预条件，例如：&#10;画面中出现明显血液&#10;画面中出现开放性伤口"
           />
         </el-form-item>
 
-        <el-form-item label="是否启用">
+        <el-form-item label="启用状态">
           <el-switch v-model="form.is_active" />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">
-          保存
+        <el-button @click="formDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
+          {{ isEdit ? '保存修改' : '创建规则' }}
         </el-button>
       </template>
     </el-dialog>
-  </el-card>
+
+    <!-- 查看详情弹窗 -->
+    <el-dialog
+      v-model="detailDialogVisible"
+      title="规则详情"
+      width="860px"
+      destroy-on-close
+    >
+      <div v-if="currentRule" class="detail-wrap">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="规则ID">
+            {{ currentRule.id }}
+          </el-descriptions-item>
+          <el-descriptions-item label="规则版本">
+            v{{ currentRule.version || 1 }}
+          </el-descriptions-item>
+          <el-descriptions-item label="规则名称">
+            {{ currentRule.rule_name || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="启用状态">
+            <el-tag :type="currentRule.is_active ? 'success' : 'info'">
+              {{ currentRule.is_active ? '启用' : '停用' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="客观化评分">
+            {{ formatScore(currentRule.objectiveness_score) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="更新时间">
+            {{ formatDateTime(currentRule.updated_at || currentRule.created_at) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="原始规则" :span="2">
+            {{ currentRule.original_rule || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="客观化规则" :span="2">
+            {{ currentRule.objectified_rule || '未客观化' }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <div class="detail-block">
+          <div class="detail-title">预条件链</div>
+          <div v-if="currentRule.preconditions?.length" class="pre-list">
+            <div
+              v-for="(item, index) in currentRule.preconditions"
+              :key="index"
+              class="pre-item"
+            >
+              <span class="pre-index">{{ index + 1 }}</span>
+              <span class="pre-text">{{ item }}</span>
+            </div>
+          </div>
+          <el-empty v-else description="暂无预条件链" />
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-block">
+            <div class="detail-title">主观词片段</div>
+            <div class="tag-list">
+              <el-tag
+                v-for="(item, index) in currentRule.subjective_spans || []"
+                :key="index"
+                class="mr8 mb8"
+              >
+                {{ item }}
+              </el-tag>
+              <span v-if="!(currentRule.subjective_spans || []).length" class="empty-inline">
+                暂无
+              </span>
+            </div>
+          </div>
+
+          <div class="detail-block">
+            <div class="detail-title">可观察信号</div>
+            <div class="tag-list">
+              <el-tag
+                v-for="(item, index) in currentRule.observable_signals || []"
+                :key="index"
+                type="success"
+                class="mr8 mb8"
+              >
+                {{ item }}
+              </el-tag>
+              <span v-if="!(currentRule.observable_signals || []).length" class="empty-inline">
+                暂无
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchRules,
@@ -194,26 +284,49 @@ import {
   deleteRule,
   objectifyRule,
 } from '../api/rule'
-import request from '../api/request'
 
 const loading = ref(false)
-const saving = ref(false)
-const objectifyingId = ref(null)
+const submitLoading = ref(false)
+const objectifyLoadingId = ref(null)
 
-const onlyActive = ref(false)
-const keyword = ref('')
 const rules = ref([])
 
-const dialogVisible = ref(false)
-const editingId = ref(null)
+const formDialogVisible = ref(false)
+const detailDialogVisible = ref(false)
+const isEdit = ref(false)
+
+const currentRule = ref(null)
 
 const form = ref({
+  id: null,
   rule_name: '',
   original_rule: '',
   is_active: true,
 })
 
-const preconditionsText = ref('[]')
+const preconditionsText = ref('')
+
+const stats = computed(() => {
+  const list = rules.value || []
+  const total = list.length
+  const active = list.filter((r) => !!r.is_active).length
+  const objectified = list.filter((r) => !!r.objectified_rule).length
+
+  const scored = list
+    .map((r) => Number(r.objectiveness_score || 0))
+    .filter((n) => !Number.isNaN(n))
+
+  const avgScore = scored.length
+    ? (scored.reduce((a, b) => a + b, 0) / scored.length).toFixed(2)
+    : '0.00'
+
+  return {
+    total,
+    active,
+    objectified,
+    avgScore,
+  }
+})
 
 function unwrap(res) {
   if (!res) return null
@@ -223,108 +336,116 @@ function unwrap(res) {
   return res
 }
 
-const filteredRules = computed(() => {
-  const kw = keyword.value.trim().toLowerCase()
-  if (!kw) return rules.value
-  return rules.value.filter((item) => {
-    return (
-      String(item.rule_name || '').toLowerCase().includes(kw) ||
-      String(item.original_rule || '').toLowerCase().includes(kw) ||
-      String(item.objectified_rule || '').toLowerCase().includes(kw)
-    )
-  })
-})
+function normalizeRule(item) {
+  return {
+    ...item,
+    preconditions: Array.isArray(item.preconditions) ? item.preconditions : [],
+    subjective_spans: Array.isArray(item.subjective_spans) ? item.subjective_spans : [],
+    observable_signals: Array.isArray(item.observable_signals) ? item.observable_signals : [],
+  }
+}
 
-function toggleShowAll() {
-  onlyActive.value = !onlyActive.value
-  loadRules()
+function formatDateTime(value) {
+  if (!value) return '-'
+  return String(value).replace('T', ' ').slice(0, 19)
+}
+
+function formatScore(value) {
+  const num = Number(value || 0)
+  return num.toFixed(2)
 }
 
 async function loadRules() {
   loading.value = true
   try {
-    const res = await fetchRules(!onlyActive.value ? true : false)
+    const res = await fetchRules(true)
     const data = unwrap(res) || []
-    rules.value = Array.isArray(data) ? data : []
-  } catch (e) {
-    console.error(e)
-    ElMessage.error(e?.response?.data?.detail || e?.message || '加载规则失败')
+    rules.value = data.map(normalizeRule)
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('获取规则失败')
   } finally {
     loading.value = false
   }
 }
 
-function openCreate() {
-  editingId.value = null
+function resetForm() {
   form.value = {
+    id: null,
     rule_name: '',
     original_rule: '',
     is_active: true,
   }
-  preconditionsText.value = '[]'
-  dialogVisible.value = true
+  preconditionsText.value = ''
 }
 
-function openEdit(row) {
-  editingId.value = row.id
+function openCreateDialog() {
+  isEdit.value = false
+  resetForm()
+  formDialogVisible.value = true
+}
+
+function openEditDialog(row) {
+  isEdit.value = true
   form.value = {
+    id: row.id,
     rule_name: row.rule_name || '',
     original_rule: row.original_rule || '',
     is_active: !!row.is_active,
   }
-  preconditionsText.value = JSON.stringify(row.preconditions || [], null, 2)
-  dialogVisible.value = true
+  preconditionsText.value = (row.preconditions || []).join('\n')
+  formDialogVisible.value = true
 }
 
-async function handleSave() {
-  const originalRule = String(form.value.original_rule || '').trim()
-  if (!originalRule) {
+function openDetailDialog(row) {
+  currentRule.value = normalizeRule(row)
+  detailDialogVisible.value = true
+}
+
+function parsePreconditions(text) {
+  return String(text || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+async function handleSubmit() {
+  if (!String(form.value.original_rule || '').trim()) {
     ElMessage.warning('原始规则不能为空')
     return
   }
 
-  let preconditions = []
-  try {
-    preconditions = JSON.parse(preconditionsText.value || '[]')
-    if (!Array.isArray(preconditions)) {
-      throw new Error('预条件必须是数组')
-    }
-  } catch {
-    ElMessage.error('预条件链必须是合法 JSON 数组')
-    return
+  const payload = {
+    rule_name: String(form.value.rule_name || '').trim(),
+    original_rule: String(form.value.original_rule || '').trim(),
+    preconditions: parsePreconditions(preconditionsText.value),
+    is_active: !!form.value.is_active,
   }
 
-  saving.value = true
+  submitLoading.value = true
   try {
-    const payload = {
-      rule_name: form.value.rule_name,
-      original_rule: originalRule,
-      preconditions,
-      is_active: form.value.is_active,
-    }
-
-    if (editingId.value) {
-      await updateRule(editingId.value, payload)
+    if (isEdit.value && form.value.id) {
+      await updateRule(form.value.id, payload)
       ElMessage.success('规则更新成功')
     } else {
       await createRule(payload)
       ElMessage.success('规则创建成功')
     }
 
-    dialogVisible.value = false
+    formDialogVisible.value = false
     await loadRules()
-  } catch (e) {
-    console.error(e)
-    ElMessage.error(e?.response?.data?.detail || e?.message || '保存失败')
+  } catch (err) {
+    console.error(err)
+    ElMessage.error(err?.response?.data?.detail || '操作失败')
   } finally {
-    saving.value = false
+    submitLoading.value = false
   }
 }
 
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(
-      `确定删除规则【${row.rule_name}】吗？`,
+      `确定删除规则【${row.rule_name || row.original_rule}】吗？`,
       '删除确认',
       {
         type: 'warning',
@@ -340,41 +461,23 @@ async function handleDelete(row) {
     await deleteRule(row.id)
     ElMessage.success('删除成功')
     await loadRules()
-  } catch (e) {
-    console.error(e)
-    ElMessage.error(e?.response?.data?.detail || e?.message || '删除失败')
+  } catch (err) {
+    console.error(err)
+    ElMessage.error(err?.response?.data?.detail || '删除失败')
   }
 }
 
 async function handleObjectify(row) {
-  objectifyingId.value = row.id
+  objectifyLoadingId.value = row.id
   try {
-    const res = await objectifyRule(row.id)
-    const data = unwrap(res)
-
-    const index = rules.value.findIndex(item => item.id === row.id)
-    if (index !== -1 && data) {
-      rules.value[index] = { ...rules.value[index], ...data }
-    }
-
-    ElMessage.success('客观化完成')
+    await objectifyRule(row.id)
+    ElMessage.success('规则客观化完成')
     await loadRules()
-  } catch (e) {
-    console.error(e)
-    ElMessage.error(e?.response?.data?.detail || e?.message || '客观化失败')
+  } catch (err) {
+    console.error(err)
+    ElMessage.error(err?.response?.data?.detail || '客观化失败')
   } finally {
-    objectifyingId.value = null
-  }
-}
-
-async function handleToggleActive(row, value) {
-  try {
-    await request.patch(`/api/rules/${row.id}/active`, { is_active: value })
-    ElMessage.success(value ? '规则已启用' : '规则已禁用')
-  } catch (e) {
-    row.is_active = !value
-    console.error(e)
-    ElMessage.error(e?.response?.data?.detail || e?.message || '状态更新失败')
+    objectifyLoadingId.value = null
   }
 }
 
@@ -384,74 +487,215 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
+.rule-page {
+  padding: 20px;
+  background: #f5f7fa;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.page-banner {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
-.left-tools {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #303133;
 }
 
-.right-tools {
+.page-desc {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.page-actions {
   display: flex;
-  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.title {
+.section-row {
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  border: none;
+  border-radius: 14px;
+}
+
+.stat-card :deep(.el-card__body) {
+  padding: 22px 22px 18px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  margin-top: 12px;
+  font-size: 34px;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1;
+}
+
+.stat-sub {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.stat-total {
+  border-left: 4px solid #409eff;
+}
+
+.stat-active {
+  border-left: 4px solid #67c23a;
+}
+
+.stat-object {
+  border-left: 4px solid #e6a23c;
+}
+
+.stat-score {
+  border-left: 4px solid #9c6bff;
+}
+
+.table-card {
+  border: none;
+  border-radius: 14px;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-title {
   font-size: 16px;
   font-weight: 700;
+  color: #303133;
 }
 
-.switch-wrap {
+.card-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #909399;
+}
+
+.table-summary {
+  font-size: 13px;
+  color: #909399;
+}
+
+.rule-table :deep(th.el-table__cell) {
+  background: #f8fafc;
+  color: #606266;
+  font-weight: 600;
+}
+
+.empty-block {
+  margin-top: 20px;
+}
+
+.detail-wrap {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-block {
+  padding: 16px;
+  border-radius: 12px;
+  background: #fafbfd;
+  border: 1px solid #eef1f6;
+}
+
+.detail-title {
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.pre-list {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
-.search-input {
-  width: 300px;
+.pre-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-.text-block {
-  line-height: 1.7;
-  color: #333;
-  white-space: normal;
-  word-break: break-word;
+.pre-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #409eff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.objectified {
-  color: #1f4b99;
+.pre-text {
+  line-height: 1.8;
+  color: #606266;
 }
 
-.tag-wrap {
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
 }
 
-.action-wrap {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.mr8 {
+  margin-right: 8px;
 }
 
-.footer-tip {
-  margin-top: 12px;
-  color: #888;
-  font-size: 12px;
+.mb8 {
+  margin-bottom: 8px;
 }
 
-.muted {
-  color: #999;
-  font-size: 12px;
+.empty-inline {
+  font-size: 13px;
+  color: #909399;
+}
+
+@media (max-width: 992px) {
+  .page-banner,
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -10,3 +10,8 @@ export function fetchSettings() {
 export function saveSettings(payload) {
   return request.put('/api/settings', payload)
 }
+
+// 测试模型连接
+export function testSettingsConnection(payload) {
+  return request.post('/api/settings/test-connection', payload)
+}

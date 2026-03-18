@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const request = axios.create({
   baseURL: 'http://127.0.0.1:8000', // ✅ 强制打到 FastAPI
-  timeout: 30000,
+  timeout: 300000,
 })
 
 // ✅ 请求拦截：自动带上 token
